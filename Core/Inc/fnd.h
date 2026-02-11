@@ -35,12 +35,11 @@ typedef struct FND_DIG
 #define SRCLK_PORT_FND GPIOB
 #define SRCLK_PIN_FND GPIO_PIN_3
 
-
+static void tiny_delay(void);
 extern void dataOut_FND(uint8_t data);
 extern void SEVEN_FND_Init();
 extern void Dig_AllOff(void);
 extern void Dig_On(void);
-static void tiny_delay(void);
 extern void SEVEN_FND();
 extern void FND_UP(uint8_t floor);
 extern void FND_DOWN(uint8_t floor);

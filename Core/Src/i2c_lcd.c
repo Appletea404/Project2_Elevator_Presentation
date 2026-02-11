@@ -1,9 +1,3 @@
-/*
- * i2c_lcd.c
- *
- *  Created on: 2026. 2. 3.
- *      Author: user24
- */
 
 #include "i2c_lcd.h"
 #include <stdint.h>
@@ -126,33 +120,33 @@ static char lcd_line1[17];
 static char prev0[17];
 static char prev1[17];
 
-static void fill_spaces_16(char *dst)
+static void fill_array(char *dst)
 {
     for (int i = 0; i < 16; i++) dst[i] = ' ';
     dst[16] = '\0';
 }
 
-static void make_line16(char *dst16, const char *src)
+static void make_line(char *dst, const char *src)
 {
-    fill_spaces_16(dst16);
+    fill_array(dst);
     if (!src) return;
 
     for (int i = 0; i < 16 && src[i] != '\0'; i++)
-        dst16[i] = src[i];
+        dst[i] = src[i];
 }
 
 void LCD_ClearBuffers(void)
 {
-    fill_spaces_16(lcd_line0);
-    fill_spaces_16(lcd_line1);
-    fill_spaces_16(prev0);
-    fill_spaces_16(prev1);
+    fill_array(lcd_line0);
+    fill_array(lcd_line1);
+    fill_array(prev0);
+    fill_array(prev1);
 }
 
 void LCD_SetText2Lines(const char *line0, const char *line1)
 {
-    make_line16(lcd_line0, line0);
-    make_line16(lcd_line1, line1);
+    make_line(lcd_line0, line0);
+    make_line(lcd_line1, line1);
 }
 
 // 변경된 줄만 LCD에 반영

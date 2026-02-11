@@ -8,7 +8,7 @@
 #define FLOOR_MIN 1
 #define FLOOR_MAX 3
 
-#define DOOR_HOLD_MS 7000 // 문열리고 대기하는 시간(대략적으로)
+#define DOOR_HOLD_MS 7000 // 문열리고 대기하는 시간(7초)
 
 
 
@@ -40,26 +40,22 @@ typedef enum	//승강기의 상태를 0,1,2,3으로 받기위해
 
 
 
-uint8_t current_floor = 1;				//현재층
-static uint8_t destination_floor = 0;	//목적지 층
-static uint8_t requested_floor = 0;		//입력받은 요청층
-static uint8_t out_req_up = 0;			//외부에서 위쪽버튼 눌렀을떄 상태 설정
-static uint8_t out_req_down = 0;		//외부에서 아래쪽버튼 눌렀을때 상태 설정
-static STATE button_flag = 0; 		// 층 버튼이 눌린건지 확인
-static bool dest_in = false;		// 내부에서 설정한 목적지 판별
-//static uint8_t emg_stop_floor = 0;		// 비상정지시 찾아갈 가장 가까운 층
-//static uint8_t outside = 0; // 외부에서 눌린건지
+uint8_t current_floor = 1;				// 현재층
+static uint8_t destination_floor = 0;	// 목적지 층
+static uint8_t requested_floor = 0;		// 입력받은 요청층
+static uint8_t out_req_up = 0;			// 외부에서 위쪽버튼 눌렀을떄 상태 설정
+static uint8_t out_req_down = 0;		// 외부에서 아래쪽버튼 눌렀을때 상태 설정
+static STATE button_flag = 0; 			// 층 버튼이 눌린건지 확인
+static bool dest_in = false;			// 내부에서 설정한 목적지인지 판별하는 변수
 static uint8_t upordown = 0; 			// 움직이는 엘리베이터의 위 아래 방향 판단
-static bool openorclose = false;			//문이 열렸는지 닫혔는지 판단
-static uint32_t doortick = 0;			//문 시간
-static uint8_t lcd_once = 0;
-//static uint32_t prevMoveTime = 0;
-
-static uint8_t lcd_open_once = 0;
-static uint8_t lcd_close_once = 0;
+static bool openorclose = false;		// 문이 열렸는지 닫혔는지 판단
+static uint32_t doortick = 0;			// 문 시간
+static uint8_t lcd_emg = 0;				// LCD 1번 출력하도록 하는 FLAG (비상 상황시)
+static uint8_t lcd_open_once = 0;		// LCD 1번 출력하도록 하는 FLAG (문 열림)
+static uint8_t lcd_close_once = 0;		// LCD 1번 출력하도록 하는 FLAG (문 닫힘)
 
 
-static void DOOR_SET(bool open)
+static void DOOR_SET(bool open)		//문 열기 닫기 플래그
 {
     static int8_t last = -1;          // -1: 초기
     if(last == (int8_t)open) return;  // 같은 명령이면 무시
@@ -245,12 +241,13 @@ void CHANGED_FLOOR(uint8_t floor)
 
 	    lcd_close_once = 0;          // 닫힘 문구 다시 찍히게
 	    lcd_open_once  = 0;          // (원하면) 열림 문구도 매번 찍히게
-	    if(lcd_open_once == 0){
-	        lcd_open_once = 1;
-	        i2c_lcd_init_check();
-	        LCD_SetText2Lines("Doors Opening", "Watch Your Step");
-	        LCD_CommitIfChanged();
-	    }
+		if (lcd_open_once == 0)
+		{
+			lcd_open_once = 1;
+			i2c_lcd_init_check();
+			LCD_SetText2Lines("Doors Opening", "Watch Your Step");
+			LCD_CommitIfChanged();
+		}
 
 	    return;
 	}
@@ -347,7 +344,6 @@ void ELEVATOR_MOVE(void)
 
 	//비상버튼
 	// 모두 초기화하고 정지
-//	lcd_once = 0;
 	if(buttonGetPressed(BTN_IN_EMG))
 	{
 		destination_floor = 0;
@@ -357,9 +353,9 @@ void ELEVATOR_MOVE(void)
 //		emg_stop_floor = 0;
 		button_flag = PAUSE;
 
-		if(lcd_once == 0)
+		if(lcd_emg == 0)
 		{
-		    lcd_once = 1;
+		    lcd_emg = 1;
 		    i2c_lcd_init_check();
 		    LCD_SetText2Lines("EMERGENCY STOP", "STAND BY");
 		    LCD_CommitIfChanged();
@@ -392,7 +388,7 @@ void ELEVATOR_MOVE(void)
 
 			SEVEN_SEG(current_floor);
 			//다시 대기상태로
-			lcd_once = 0;
+			lcd_emg = 0;
 			button_flag = IDLE;
 		}
 		return;		//ELEVATOR_MOVE() 바로 종료
@@ -436,7 +432,7 @@ void ELEVATOR_MOVE(void)
 	        }
 	    }
 
-	    // ✅ 자동 닫힘은 "문이 열려있을 때만" 동작하게 하는게 안전
+	    // 자동 닫힘은 문이 열려있을 때만
 	    if(openorclose && (HAL_GetTick() - doortick > DOOR_HOLD_MS))
 	    {
 	        DOOR_SET(false);
@@ -491,7 +487,7 @@ void ELEVATOR_MOVE(void)
 
 		case MOVE:
 		{
-			if(dest_in && destination_floor != 0)
+			if(dest_in && destination_floor != 0)	//내부 버튼으로 설정한 목적지?
 			{
 			    // 목적지 버튼 취소 감지
 			    if(!REQ_CHECK(destination_floor, requested_floor))

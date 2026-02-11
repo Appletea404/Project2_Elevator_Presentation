@@ -17,8 +17,7 @@
 #define DIR_CW                0 // 시계 방향
 #define DIR_CCW               1
 
-void ButtonMove(uint8_t current_floor);
-
+void ELEVATOR_MOVE(void);
 
 
 extern uint8_t current_floor;
